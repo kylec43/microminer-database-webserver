@@ -8,32 +8,51 @@ def runDatabaseManager(parent, connection, client_address):
 
 	success = True
 	firebaseController = FirebaseController()
-
+	queryResults = ''
+	requestType = b''
 	try:
 		buffer_size = 500000
 		#Recieve input lines and noise words from client.
 		connection.settimeout(10)
 		requestType = connection.recv(buffer_size)
+	
 		print("Recieved data from client:", client_address)
 
 		connection.sendall(b'received')
 
 		total_time_start = time.time()
-		if requestType.decode('utf-8') == Constants.REQUEST_TYPE_UPLOAD:
+		if requestType == Constants.REQUEST_TYPE_UPLOAD:
 			
 			originalUrlKeywords = connection.recv(buffer_size)
+			print(originalUrlKeywords.decode('utf-8'))
 			connection.sendall(b'received')
 			kwicUrlKeywords = connection.recv(buffer_size)
+			print(kwicUrlKeywords.decode('utf-8'))
+
+			connection.sendall(b'received')
+			noiseWords = connection.recv(buffer_size)
+			print(noiseWords.decode('utf-8'))
+
 
 			print('made it1')
 			#convert data to string!
 			originalUrlKeywords = originalUrlKeywords.decode('utf-8')
 			kwicUrlKeywords = kwicUrlKeywords.decode('utf-8')
+			noiseWords = noiseWords.decode('utf-8')
 
-			originalUrlKeywords = formatUpload(originalUrlKeywords)
-			kwicUrlKeywords = formatUpload(kwicUrlKeywords)
+			originalUrlKeywords = formatUploadUrlsKeywords(originalUrlKeywords)
+			kwicUrlKeywords = formatUploadUrlsKeywords(kwicUrlKeywords)
+			noiseWords = formatUploadNoiseWords(noiseWords)
+			print(originalUrlKeywords)
+			print(kwicUrlKeywords)
+			print(noiseWords)
+			firebaseController.upload(originalUrlKeywords, kwicUrlKeywords, noiseWords)
+		elif requestType == Constants.REQUEST_TYPE_QUERY:
+			keywords = connection.recv(buffer_size)
+			keywords = keywords.decode('utf-8')
+			keywords = formatKeywordsQuery(keywords)
 
-			firebaseController.upload(originalUrlKeywords, kwicUrlKeywords)
+			queryResults = firebaseController.getQueryResults(keywords)		
 	
 
 			
@@ -51,17 +70,24 @@ def runDatabaseManager(parent, connection, client_address):
 
 	finally:
 		# Close the client connection after the try or except block
-		if success:
-			connection.sendall(Constants.SERVER_RESPONSE_SUCCESS.encode('utf-8'))
+		if requestType == Constants.REQUEST_TYPE_QUERY:
+			if success:
+				connection.sendall(queryResults.encode('utf-8'))
+			else:
+				print('failed')
+				connection.sendall(Constants.SERVER_RESPONSE_QUERY_FAILURE)
 		else:
-			print('failed')
-			connection.sendall(Constants.SERVER_RESPONSE_FAILURE.encode('utf-8'))
+			if success:
+				connection.sendall(Constants.SERVER_RESPONSE_UPLOAD_SUCCESS)
+			else:
+				print('failed')
+				connection.sendall(Constants.SERVER_RESPONSE_UPLOAD_FAILURE)
 
 		connection.close()
 		print("Connection has been closed")
 
 
-def formatUpload(UrlsKeywords):
+def formatUploadUrlsKeywords(UrlsKeywords):
 	formattedUrlsKeywords = []
 	UrlsKeywords = UrlsKeywords.split('\n')
 	if UrlsKeywords[-1] == '': UrlsKeywords.pop()
@@ -74,3 +100,10 @@ def formatUpload(UrlsKeywords):
 		
 
 	return formattedUrlsKeywords
+
+def formatUploadNoiseWords(noiseWords):
+	return noiseWords.split()
+
+
+def formatKeywordsQuery(keywords):
+	return keywords.split()
