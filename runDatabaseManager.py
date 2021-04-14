@@ -24,14 +24,12 @@ def runDatabaseManager(parent, connection, client_address):
 		if requestType == Constants.REQUEST_TYPE_UPLOAD:
 			
 			originalUrlKeywords = connection.recv(buffer_size)
-			print(originalUrlKeywords.decode('utf-8'))
+
 			connection.sendall(b'received')
 			kwicUrlKeywords = connection.recv(buffer_size)
-			print(kwicUrlKeywords.decode('utf-8'))
 
 			connection.sendall(b'received')
 			noiseWords = connection.recv(buffer_size)
-			print(noiseWords.decode('utf-8'))
 
 
 			print('made it1')
@@ -43,9 +41,7 @@ def runDatabaseManager(parent, connection, client_address):
 			originalUrlKeywords = formatUploadUrlsKeywords(originalUrlKeywords)
 			kwicUrlKeywords = formatUploadUrlsKeywords(kwicUrlKeywords)
 			noiseWords = formatUploadNoiseWords(noiseWords)
-			print(originalUrlKeywords)
-			print(kwicUrlKeywords)
-			print(noiseWords)
+
 			firebaseController.upload(originalUrlKeywords, kwicUrlKeywords, noiseWords)
 		elif requestType == Constants.REQUEST_TYPE_QUERY:
 			keywords = connection.recv(buffer_size)
